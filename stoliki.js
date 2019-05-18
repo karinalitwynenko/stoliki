@@ -99,23 +99,25 @@ var drawableElementMouseD = function(e) {
 
 // puszczenie obiektu
 var drawableElementMouseUp = function(e){
-    drawingPanel.removeEventListener("mousemove",drawableElementMoved);
-    drawingPanel.removeEventListener("mouseup",drawableElementMouseUp);
-    el = movedElement;
-    transformMatrix = movedElement.transform.baseVal.consolidate().matrix;
-    var X = movedTempEl.x - movedElement.x;
-    var Y = movedTempEl.y - movedElement.y;
-    movedElement.x += X;
-    movedElement.y += Y;
-    X += transformMatrix.e;
-    Y += transformMatrix.f;
-    movedElement.setAttributeNS(null,"transform","matrix( 1 0 0 1 "+X+" "+ Y+")");
-    movedElement.x = 
-    movedElement.style = "visibility:visible;";
+	if(e.button==0){
+		drawingPanel.removeEventListener("mousemove",drawableElementMoved);
+		drawingPanel.removeEventListener("mouseup",drawableElementMouseUp);
+		el = movedElement;
+		transformMatrix = movedElement.transform.baseVal.consolidate().matrix;
+		var X = movedTempEl.x - movedElement.x;
+		var Y = movedTempEl.y - movedElement.y;
+		movedElement.x += X;
+		movedElement.y += Y;
+		X += transformMatrix.e;
+		Y += transformMatrix.f;
+		movedElement.setAttributeNS(null,"transform","matrix( 1 0 0 1 "+X+" "+ Y+")");
+		movedElement.x = 
+		movedElement.style = "visibility:visible;";
 
-    movedTempEl.parentNode.removeChild(movedTempEl);
-    movedElement = null;
-    movedTempEl  = null;
+		movedTempEl.parentNode.removeChild(movedTempEl);
+		movedElement = null;
+		movedTempEl  = null;
+	}
    
 }
 
@@ -133,13 +135,15 @@ function drawableElementMoved(e) {
 
 // funkcja dodajaca klikniety element do panelu edycyjnego
 var tableClicked = function(e){
-    var drawableClone = this.cloneNode(true);
-    // dodaj neutralną macierz transformacji
-    drawableClone.setAttributeNS(null,"transform","matrix( 1 0 0 1 0 0)");
-    drawableClone.addEventListener('mousedown', drawableElementMouseD,false);
-    drawingPanel.appendChild(drawableClone);    
-     // dodaj neutralną macierz transformacji
-    drawableClone.setAttributeNS(null,"transform","matrix( 1 0 0 1 0 0)")
+	if(e.button==0){
+		var drawableClone = this.cloneNode(true);
+		// dodaj neutralną macierz transformacji
+		drawableClone.setAttributeNS(null,"transform","matrix( 1 0 0 1 0 0)");
+		drawableClone.addEventListener('mousedown', drawableElementMouseD,false);
+		drawingPanel.appendChild(drawableClone);    
+		 // dodaj neutralną macierz transformacji
+		drawableClone.setAttributeNS(null,"transform","matrix( 1 0 0 1 0 0)")
+	}
 }
 
 function moveSvgObject(svgObj,x,y) {
