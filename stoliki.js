@@ -72,26 +72,29 @@ function tablesObjectLoaded(e){
 
 // przemieszczanie obiektu, gdy przytrzymano przycisk
 var drawableElementMouseD = function(e) {
-    var shapeEl = getTempRect(this);
-    movedTempEl = shapeEl;
-    // ukryj element
-    this.style = "visibility:hidden;";
-    // wyswietl obrys
-    drawingPanel.appendChild(shapeEl);
+	if(e.button==0){
+	    var shapeEl = getTempRect(this);
+		movedTempEl = shapeEl;
+		// ukryj element
+		this.style = "visibility:hidden;";
+		// wyswietl obrys
+		drawingPanel.appendChild(shapeEl);
 
-    // polozenie kursora na panelu edycyjnym w momencie klikniecia - inicjalizacja
-    cords.x = e.clientX-getOffset(drawingPanel).x;
-    cords.y = e.clientY-getOffset(drawingPanel).y;
-	
-    movedTempEl  = shapeEl;
-    var offset = getOffset(drawingPanel);
-    var shapeBoundries  = this.getBoundingClientRect();
-    this.x = shapeBoundries.left - offset.x;
-    this.y = shapeBoundries.top - offset.y;
-    movedElement = this;
-    //dodaj obsluge zdarzen
-    drawingPanel.addEventListener("mouseup",drawableElementMouseUp,false);
-    drawingPanel.addEventListener('mousemove',drawableElementMoved,false);
+		// polozenie kursora na panelu edycyjnym w momencie klikniecia - inicjalizacja
+		cords.x = e.clientX-getOffset(drawingPanel).x;
+		cords.y = e.clientY-getOffset(drawingPanel).y;
+
+		movedTempEl  = shapeEl;
+		var offset = getOffset(drawingPanel);
+		var shapeBoundries  = this.getBoundingClientRect();
+		this.x = shapeBoundries.left - offset.x;
+		this.y = shapeBoundries.top - offset.y;
+		movedElement = this;
+		//dodaj obsluge zdarzen
+		drawingPanel.addEventListener("mouseup",drawableElementMouseUp,false);
+		drawingPanel.addEventListener('mousemove',drawableElementMoved,false);
+		}
+
 }
 
 // puszczenie obiektu
