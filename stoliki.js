@@ -1,14 +1,13 @@
-buff = [];
+//buff = [];
 tables_count = 4;
 movedElement = null;
 movedTempEl = null;
-elementClicked = false; // co to
+elementClicked = false;
 ok = 'OK!';
 cords = {
     x: null,
     y: null
 }
-
 
 // *****************************************
 // zaczekaj na elementy svg  az sie zaladuja
@@ -34,7 +33,6 @@ function getDocument(embededEl) {
 function getSVGObjects() {
     var elems = document.querySelectorAll(".embededSVG");
     for (let i = 0; i < elems.length; i++){
-        console.log(elems[i]);
         var  doc = getDocument(elems[i]);
         // jesli udalo sie pobrac pliki svg
         if(doc){
@@ -43,7 +41,6 @@ function getSVGObjects() {
                 var svgEl = doc.getElementById('table'+i);
                 svgEl.addEventListener("click",tableClicked,false);   
             }
-
         }
     }
 
@@ -85,31 +82,23 @@ var drawableElementMouseD = function(e) {
     // polozenie kursora na panelu edycyjnym w momencie klikniecia - inicjalizacja
     cords.x = e.clientX-getOffset(drawingPanel).x;
     cords.y = e.clientY-getOffset(drawingPanel).y;
-    
+	
     movedTempEl  = shapeEl;
-
     var offset = getOffset(drawingPanel);
     var shapeBoundries  = this.getBoundingClientRect();
     this.x = shapeBoundries.left - offset.x;
     this.y = shapeBoundries.top - offset.y;
     movedElement = this;
-    console.log("clicked - "+ movedElement);
-
     //dodaj obsluge zdarzen
     drawingPanel.addEventListener("mouseup",drawableElementMouseUp,false);
     drawingPanel.addEventListener('mousemove',drawableElementMoved,false);
-    
-    console.log('kliknieto na pozycje : X = '+cords.x + '  Y = '+cords.y);
-
 }
 
 // puszczenie obiektu
 var drawableElementMouseUp = function(e){
     drawingPanel.removeEventListener("mousemove",drawableElementMoved);
     drawingPanel.removeEventListener("mouseup",drawableElementMouseUp);
-    console.log(movedElement.transform.SVGMatrix);
     el = movedElement;
-    //movedElement.setAttributeNS(null,"transform","translate("+X+" "+Y+")");
     transformMatrix = movedElement.transform.baseVal.consolidate().matrix;
     var X = movedTempEl.x - movedElement.x;
     var Y = movedTempEl.y - movedElement.y;
@@ -124,18 +113,15 @@ var drawableElementMouseUp = function(e){
     movedTempEl.parentNode.removeChild(movedTempEl);
     movedElement = null;
     movedTempEl  = null;
-    
-
+   
 }
 
 function drawableElementMoved(e) {
     // polozenie kursora na panelu edycyjnym
     cx = e.clientX-getOffset(drawingPanel).x;
     cy = e.clientY-getOffset(drawingPanel).y;
-    // buff.push(cx,cy);
     // przesun o roznice polozen
     moveSvgObject(movedTempEl ,cx - cords.x,cy-cords.y);
-    //console.log('przesuniecie po x: '+(cx-cords.x)+' i y: '+(cy-cords.y));
     // zmienna gloabalna przechowujaca poprzednie polozenie kursora
     cords.x = cx;
     cords.y = cy;
@@ -145,7 +131,6 @@ function drawableElementMoved(e) {
 // funkcja dodajaca klikniety element do panelu edycyjnego
 var tableClicked = function(e){
     var drawableClone = this.cloneNode(true);
-    drawableClone.id = ""; // co to?
     // dodaj neutralną macierz transformacji
     drawableClone.setAttributeNS(null,"transform","matrix( 1 0 0 1 0 0)");
     drawableClone.addEventListener('mousedown', drawableElementMouseD,false);
@@ -156,7 +141,6 @@ var tableClicked = function(e){
 
 function moveSvgObject(svgObj,x,y) {
     var shapeBoundries  = svgObj.getBoundingClientRect();
-
     var X = svgObj.x + x;
     var Y = svgObj.y + y;
     var X2 = svgObj.x2 + x;
