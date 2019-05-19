@@ -93,10 +93,9 @@ var drawableElementMouseD = function(e) {
         //dodaj obsluge zdarzen
 		drawingPanel.addEventListener("mouseup",drawableElementMouseUp,false);
         drawingPanel.addEventListener("mousemove",drawableElementMoved,false);
-        drawingPanel.addEventListener("mouseout",drawingPanelMouseOut,false);
+        drawingPanel.addEventListener("mouseleave",drawingPanelMouseLeave,false);
 
 		}
-
 }
 
 
@@ -105,7 +104,7 @@ var drawableElementMouseUp = function(e){
 	if(e.button==0){
 		drawingPanel.removeEventListener("mousemove",drawableElementMoved);
         drawingPanel.removeEventListener("mouseup",drawableElementMouseUp);
-        drawingPanel.removeEventListener("mouseout",drawingPanelMouseOut);
+        drawingPanel.removeEventListener("mouseleave",drawingPanelMouseLeave);
 
 		el = movedElement;
 		transformMatrix = movedElement.transform.baseVal.consolidate().matrix;
@@ -139,8 +138,12 @@ function drawableElementMoved(e) {
 }
 
 // gdy podczas przesuwania elementu, kursor opuści pole edycyjne
-function drawingPanelMouseOut(e){
-    drawingPanel.dispatchEvent("mouseup"); // wywołaj zdarzenie mouseup
+function drawingPanelMouseLeave(e){
+    var event = new MouseEvent('mouseup', {
+        view: window,
+        button: 0
+      });
+    drawingPanel.dispatchEvent(event); // wywołaj zdarzenie mouseup
 }
 
 // funkcja dodajaca klikniety element do panelu edycyjnego
