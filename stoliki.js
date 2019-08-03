@@ -1,4 +1,11 @@
 //buff = [];
+// promien galki pozwalajacej na obrot obiektu
+const rotationKnobRadius = 5;
+const knobDistance = 2;
+const knobStyle = {"stroke":"gray", "stroke-width":1, "fill":"white", "id":"knob"};
+// aktualnie widoczne(aktywne) galki obrotu, kolejnosc od prawej gornej zg. z ruchem zegara
+activeKnobs = [];
+
 tables_count = 4;
 movedElement = null;
 movedTempEl = null;
@@ -70,31 +77,41 @@ function tablesObjectLoaded(e){
 }
 */
 
-// przemieszczanie obiektu, gdy przytrzymano przycisk
+// rozpocznij przemieszczanie obiektu, gdy przytrzymano przycisk
+// obsluga tylko lewym przyciskiem myszki
 var drawableElementMouseD = function(e) {
+    // sprawdz czy lewy przycisk myszy
 	if(e.button==0){
 	    var shapeEl = getTempRect(this);
 		movedTempEl = shapeEl;
 		// ukryj element
 		this.style = "visibility:hidden;";
-		// wyswietl obrys
+		// wyswietl obrys (przerywana linia w ksztalcie obiektu)
 		drawingPanel.appendChild(shapeEl);
 
 		// polozenie kursora na panelu edycyjnym w momencie klikniecia - inicjalizacja
 		cords.x = e.clientX-getOffset(drawingPanel).x;
 		cords.y = e.clientY-getOffset(drawingPanel).y;
 
-		movedTempEl  = shapeEl;
+		movedTempEl  = shapeEl; // obrys obiektu, który będzie przesuwany po ekranie
 		var offset = getOffset(drawingPanel);
-		var shapeBoundries  = this.getBoundingClientRect();
-		this.x = shapeBoundries.left - offset.x;
-		this.y = shapeBoundries.top - offset.y;
-		movedElement = this;
-        //dodaj obsluge zdarzen
-		drawingPanel.addEventListener("mouseup",drawableElementMouseUp,false);
+        var shapeBoundries  = this.getBoundingClientRect();
+        // dodaj atrybut wezla z polozeniem obiektu wzgledem panelu edycyjnego
+		this.xPos = shapeBoundries.left - offset.x;
+		this.yPos = shapeBoundries.top - offset.y;
+        movedElement = this;
+        
+        // dodaj obsluge zdarzen do panelu edycyjnego, aktywny obiekt
+        // jest przechowywany w zmiennych movedElement oraz movedTempEl
+        // --upuszczenie obiektu
+        drawingPanel.addEventListener("mouseup",drawableElementMouseUp,false);
+        // --przemieszczanie obiektu
         drawingPanel.addEventListener("mousemove",drawableElementMoved,false);
+        // --gdy kursor opuści panel
         drawingPanel.addEventListener("mouseleave",drawingPanelMouseLeave,false);
-
+        
+        // usun galki obrotu
+        removeKnobs();
 		}
 }
 
@@ -108,19 +125,23 @@ var drawableElementMouseUp = function(e){
 
 		el = movedElement;
 		transformMatrix = movedElement.transform.baseVal.consolidate().matrix;
-		var X = movedTempEl.x - movedElement.x;
-		var Y = movedTempEl.y - movedElement.y;
-		movedElement.x += X;
-		movedElement.y += Y;
+		var X = movedTempEl.xPos - movedElement.xPos;
+		var Y = movedTempEl.yPos - movedElement.yPos;
+		movedElement.xPos += X;
+		movedElement.yPos += Y;
 		X += transformMatrix.e;
 		Y += transformMatrix.f;
 		movedElement.setAttributeNS(null,"transform","matrix( 1 0 0 1 "+X+" "+ Y+")");
 		movedElement.x = 
 		movedElement.style = "visibility:visible;";
 
-		movedTempEl.parentNode.removeChild(movedTempEl);
+        movedTempEl.parentNode.removeChild(movedTempEl);
+        
+        // dodaj galki obrotu
+        addKnobs(movedElement);
 		movedElement = null;
-		movedTempEl  = null;
+        movedTempEl  = null;
+
 	}
    
 }
@@ -146,30 +167,30 @@ function drawingPanelMouseLeave(e){
     drawingPanel.dispatchEvent(event); // wywołaj zdarzenie mouseup
 }
 
-// funkcja dodajaca klikniety element do panelu edycyjnego
+// add table to drawing panel
 var tableClicked = function(e){
 	if(e.button==0){
 		var drawableClone = this.cloneNode(true);
-		// dodaj neutralną macierz transformacji
+		// add default transform matrix
 		drawableClone.setAttributeNS(null,"transform","matrix( 1 0 0 1 0 0)");
 		drawableClone.addEventListener('mousedown', drawableElementMouseD,false);
 		drawingPanel.appendChild(drawableClone);    
-		 // dodaj neutralną macierz transformacji
-		drawableClone.setAttributeNS(null,"transform","matrix( 1 0 0 1 0 0)")
+
 	}
 }
 
+// przesuwanie obrysu o wartosc x i y
 function moveSvgObject(svgObj,x,y) {
     var shapeBoundries  = svgObj.getBoundingClientRect();
-    var X = svgObj.x + x;
-    var Y = svgObj.y + y;
-    var X2 = svgObj.x2 + x;
-    var Y2 = svgObj.y2 + y;
+    var X = svgObj.xPos + x;
+    var Y = svgObj.yPos + y;
+    var X2 = svgObj.x2Pos + x;
+    var Y2 = svgObj.y2Pos + y;
     svgObj.setAttributeNS(null, "d", "M"+X+" "+Y+" L"+X2+" "+Y+" L"+X2+" "+Y2+" L"+X+" "+Y2+" Z");    
-    svgObj.x = X;
-    svgObj.y = Y;
-    svgObj.x2 = X2;
-    svgObj.y2 = Y2;
+    svgObj.xPos = X;
+    svgObj.yPos = Y;
+    svgObj.x2Pos = X2;
+    svgObj.y2Pos = Y2;
 }
 
 function getOffset(element){
@@ -178,6 +199,12 @@ function getOffset(element){
         x: rect.left,
         y: rect.top
     };    
+}
+
+// function for handling knob's mousedown event 
+function rotateElement(e){
+    console.log('rotate..');
+
 }
 
 function getTempRect(drawableEl){
@@ -197,14 +224,77 @@ function getTempRect(drawableEl){
     tempRect.setAttributeNS(null, "stroke-width", "1");
     tempRect.setAttributeNS(null, "stroke-dasharray", "10,10");
 
-    tempRect.x = x;
-    tempRect.y = y;
-    tempRect.x2 = x2;
-    tempRect.y2 = y2;
+    tempRect.xPos = x;
+    tempRect.yPos = y;
+    tempRect.x2Pos = x2;
+    tempRect.y2Pos = y2;
 
 	return tempRect;
 	
 } 
+
+function addKnobs(svgElement){
+    // use getTempRect function - get evaluated position of the element
+    var tempRect = getTempRect(svgElement);
+    // create svg circle
+    var knob = document.createElementNS("http://www.w3.org/2000/svg","circle");
+    // set top-letf knob
+    knob.setAttributeNS(null, "cx", svgElement.xPos - knobDistance);
+    knob.setAttributeNS(null, "cy", svgElement.yPos - knobDistance);
+    knob.setAttributeNS(null, "r", rotationKnobRadius);
+    addAttributesNS(knob,knobStyle);
+    drawingPanel.appendChild(knob);
+    activeKnobs[0] = knob;
+
+    knob = document.createElementNS("http://www.w3.org/2000/svg","circle");
+    // set top-right knob
+    knob.setAttributeNS(null, "cx", tempRect.x2Pos + knobDistance);
+    knob.setAttributeNS(null, "cy", svgElement.yPos - knobDistance);
+    knob.setAttributeNS(null, "r", rotationKnobRadius);
+    addAttributesNS(knob,knobStyle);
+    drawingPanel.appendChild(knob);
+    activeKnobs[1] = knob;
+
+    knob = document.createElementNS("http://www.w3.org/2000/svg","circle");
+    // set bottom-right knob
+    knob.setAttributeNS(null, "cx", tempRect.x2Pos + knobDistance);
+    knob.setAttributeNS(null, "cy", tempRect.y2Pos + knobDistance);
+    knob.setAttributeNS(null, "r", rotationKnobRadius);
+    addAttributesNS(knob,knobStyle);
+    drawingPanel.appendChild(knob);
+    activeKnobs[2] = knob;
+
+
+    knob = document.createElementNS("http://www.w3.org/2000/svg","circle");
+    // set bottom-left knob
+    knob.setAttributeNS(null, "cx", svgElement.xPos - knobDistance);
+    knob.setAttributeNS(null, "cy", tempRect.y2Pos + knobDistance);
+    knob.setAttributeNS(null, "r", rotationKnobRadius);
+    addAttributesNS(knob,knobStyle);
+    drawingPanel.appendChild(knob);
+    activeKnobs[3] = knob;
+
+    // add mousedown event listeners
+    for(let i=0; i < activeKnobs.length; i++){
+        activeKnobs[i].addEventListener("mousedown",rotateElement);
+    }
+
+}
+
+// delete active rotation knobs
+function removeKnobs(){
+    for(let i=0; i < activeKnobs.length; i++){
+        drawingPanel.removeChild(activeKnobs[i]);
+    }
+    activeKnobs = [];
+}
+
+// adding multiple attributes to ns node
+function addAttributesNS(element, attrs){
+    for( key in attrs){
+        element.setAttributeNS(null,key,attrs[key]);
+    }
+}
 /*
  //rysowanie czarna kreska po panelu
 
