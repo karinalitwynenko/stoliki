@@ -9,6 +9,7 @@ activeElement = null;
 tables_count = 4;
 movedElement = null;
 movedTempEl = null;
+activeResizeBorder = null;
 elementClicked = false;
 centroid = null;
 ok = 'OK!';
@@ -16,8 +17,7 @@ cords = {
     x: null,
     y: null
 }
-rotateR=0;
-rotateL=0;
+rotate = 0;
 
 
 // *****************************************
@@ -60,9 +60,17 @@ function getSVGObjects() {
 
 
 
+
 // rozpocznij przemieszczanie obiektu, gdy przytrzymano przycisk
 // obsluga tylko lewym przyciskiem myszki
 var drawableElementMouseD = function(e) {
+    if(activeResizeBorder){
+        // remove active 'resize' border
+        activeResizeBorder.parentNode.removeChild(activeResizeBorder);
+        activeResizeBorder = null;
+    }
+
+
     // sprawdz czy lewy przycisk myszy
 	if(e.button==0){
 	    var shapeEl = getTempRect(this);
@@ -134,9 +142,10 @@ var drawableElementMouseUp = function(e){
         movedElement = null;
         movedTempEl  = null;
         
-        console.log(getCentroid(activeElement));
-        // dodaj galki obrotu
+        // add rotation knobs
         addKnobs(activeElement);
+        // add 'resize' border
+        addResizeBorder(activeElement);
 
         centroid = null;
 
@@ -228,18 +237,18 @@ function rotateElement(e){
 
     // rotate left
     if(this == activeKnobs[1]){
-        rotateL+=20;
+        rotate+=20;
         rotation.setRotate(rotateL,centroid[0],centroid[1]);
     }
     else{
-        rotateR-=20;
+        rotate-=20;
         rotation.setRotate(rotateR,centroid[0],centroid[1]);
     }
 
 }
 
 
-function getTempRect(drawableEl){
+function getTempRect(drawableEl,large = null){
     //get drawing panel offset
     var offset = getOffset(drawingPanel);
     // get boundries of the passed element
@@ -250,12 +259,19 @@ function getTempRect(drawableEl){
     var y = shapeBoundries.top - offset.y;
     var y2 = y + shapeBoundries.height;
     var tempRect = document.createElementNS("http://www.w3.org/2000/svg","path");
-    tempRect.setAttributeNS(null, "d", "M"+x+" "+y+" L"+x2+" "+y+" L"+x2+" "+y2+" L"+x+" "+y2+" Z");
-    //tempRect.style = 'fille:"none";stroke:"grey";stroke-width:"1";stroke-dasharray:"10,10';
+    if(large){
+        tempRect.setAttributeNS(null, "d", "M"+(x-2)+" "+(y-2)+" L"+(x2+2)+" "+(y-2)+" L"+(x2+2)+" "+(y2+2)+" L"+(x-2)+" "+(y2+2)+" Z");
+        tempRect.setAttributeNS(null, "stroke-width", "5");
+        tempRect.setAttributeNS(null, "stroke-opacity", "0");
+    }
+    else{
+        tempRect.setAttributeNS(null, "d", "M"+x+" "+y+" L"+x2+" "+y+" L"+x2+" "+y2+" L"+x+" "+y2+" Z");
+        tempRect.setAttributeNS(null, "stroke-width", "1");
+        tempRect.setAttributeNS(null, "stroke-dasharray", "10,10");
+
+    }
     tempRect.setAttributeNS(null, "fill", "none");
     tempRect.setAttributeNS(null, "stroke", "grey");
-    tempRect.setAttributeNS(null, "stroke-width", "1");
-    tempRect.setAttributeNS(null, "stroke-dasharray", "10,10");
 
     tempRect.xPos = x;
     tempRect.yPos = y;
@@ -265,6 +281,34 @@ function getTempRect(drawableEl){
 	return tempRect;
 	
 } 
+
+// add invisible border around element so it can capture resize events
+function addResizeBorder(element){
+    var tempRect = getTempRect(element,true);
+    tempRect.classList.add('resize-pointer');   
+    activeResizeBorder = tempRect;
+    tempRect.addEventListener('mousedown',resize);
+    
+    drawingPanel.appendChild(tempRect);
+}
+
+
+function resize(e){
+    var offset = getOffset(drawingPanel);
+
+    this.addEventListener('mousemove', function(e){
+        console.log("x = " + e.clientX - offset.x );
+        console.log("y = " + e.clientY - offset.y );
+    });
+
+    this.addEventListener('mouseup', function(e){
+        this.onmousemove = null;
+        this.onmouseup = null;
+    });
+
+
+}
+
 
 function addKnobs(svgElement){
     // use getTempRect function - get evaluated position of the element

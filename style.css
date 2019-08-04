@@ -3,6 +3,7 @@ html,body {
     width:100%;
     height:600px;
 
+
 }
 body{
     margin:0;
@@ -41,4 +42,8 @@ body{
 
 #knob {
     cursor: move;
+}
+
+.resize-pointer{
+    cursor:nesw-resize
 }
