@@ -3,18 +3,22 @@
 const rotationKnobRadius = 5;
 const knobDistance = 2;
 const knobStyle = {"stroke":"gray", "stroke-width":1, "fill":"white", "id":"knob"};
-// aktualnie widoczne(aktywne) galki obrotu, kolejnosc od prawej gornej zg. z ruchem zegara
-activeKnobs = [];
 
+activeKnobs = []; // active(visible) rotation knobs
+activeElement = null;
 tables_count = 4;
 movedElement = null;
 movedTempEl = null;
 elementClicked = false;
+centroid = null;
 ok = 'OK!';
 cords = {
     x: null,
     y: null
 }
+rotateR=0;
+rotateL=0;
+
 
 // *****************************************
 // zaczekaj na elementy svg  az sie zaladuja
@@ -54,28 +58,7 @@ function getSVGObjects() {
     drawingPanel.style = "background-image:url(grid_background.svg); background-repeat: repeat;"
 }
 
-// zmienna do obslugi przenoszenia elementow po panelu
-drawableElMouseCl = false;
 
-/*
-function tablesObjectLoaded(e){
-    pickupPanel = document.getElementById('pickupPanel');
-    drawingPanel = document.getElementById("drawingPanel");
-    // pobierz dokument svg wewnatrz tagu object
-    var tabObj = document.getElementById('tablesObject')
-    console.log(tabObj);
-    console.log(tabObj.contentDocument);
-    this.contentDocument.onload = function(e){
-        // konfiguracja stolow
-        for(let i=0;i<drawableObjects.length;i++){
-            var svgEl = document.getElementById('table'+i);
-            svgEl.classList.add("table");
-            svgEl.style.paddingLeft="15%";    
-            svgEl.addEventListener("click",tableClicked,false);
-        }
-    }
-}
-*/
 
 // rozpocznij przemieszczanie obiektu, gdy przytrzymano przycisk
 // obsluga tylko lewym przyciskiem myszki
@@ -116,31 +99,47 @@ var drawableElementMouseD = function(e) {
 }
 
 
-// puszczenie obiektu
+// drop element
 var drawableElementMouseUp = function(e){
-	if(e.button==0){
+    // only for left mouse button up event 
+	if(e.button == 0){
+        // remove eventlisteners from element
 		drawingPanel.removeEventListener("mousemove",drawableElementMoved);
         drawingPanel.removeEventListener("mouseup",drawableElementMouseUp);
         drawingPanel.removeEventListener("mouseleave",drawingPanelMouseLeave);
 
 		el = movedElement;
-		transformMatrix = movedElement.transform.baseVal.consolidate().matrix;
-		var X = movedTempEl.xPos - movedElement.xPos;
-		var Y = movedTempEl.yPos - movedElement.yPos;
+        //var transformMatrix = movedElement.transform.baseVal.consolidate().matrix;
+        // get previous translation
+        var prevTranslation = movedElement.transform.baseVal.getItem(0);
+        // calculate position for dropped element
+		var X = movedTempEl.xPos - movedElement.xPos; 
+        var Y = movedTempEl.yPos - movedElement.yPos;
+        // update position data
 		movedElement.xPos += X;
-		movedElement.yPos += Y;
-		X += transformMatrix.e;
-		Y += transformMatrix.f;
-		movedElement.setAttributeNS(null,"transform","matrix( 1 0 0 1 "+X+" "+ Y+")");
-		movedElement.x = 
-		movedElement.style = "visibility:visible;";
+        movedElement.yPos += Y;
+
+        var translation = drawingPanel.createSVGTransform();
+        translation.setTranslate(X,Y);
+		X += prevTranslation.matrix.e;
+		Y += prevTranslation.matrix.f;
+        prevTranslation.setTranslate(X,Y);
+
+		//movedElement.setAttributeNS(null,"transform","matrix( 1 0 0 1 "+X+" "+ Y+")");
+        //movedElement.transform.baseVal.appendItem(translation);
+        movedElement.style = "visibility:visible;";
 
         movedTempEl.parentNode.removeChild(movedTempEl);
-        
-        // dodaj galki obrotu
-        addKnobs(movedElement);
-		movedElement = null;
+        activeElement = movedElement;
+        movedElement = null;
         movedTempEl  = null;
+        
+        console.log(getCentroid(activeElement));
+        // dodaj galki obrotu
+        addKnobs(activeElement);
+
+        centroid = null;
+
 
 	}
    
@@ -167,12 +166,23 @@ function drawingPanelMouseLeave(e){
     drawingPanel.dispatchEvent(event); // wywołaj zdarzenie mouseup
 }
 
-// add table to drawing panel
+// add table to the drawing panel
 var tableClicked = function(e){
 	if(e.button==0){
-		var drawableClone = this.cloneNode(true);
-		// add default transform matrix
-		drawableClone.setAttributeNS(null,"transform","matrix( 1 0 0 1 0 0)");
+        var drawableClone = this.cloneNode(true);
+        // clear transform list of the element
+        drawableClone.transform.baseVal.clear();
+        //drawableClone.transform.baseVal.initialize(drawingPanel.createSVGTransform().setTranslate(0,0));
+        // add default translate and rotate transformation
+        var translation = drawingPanel.createSVGTransform();
+        drawableClone.transform.baseVal.appendItem(translation);
+        translation.setTranslate(0,0);
+        //drawableClone.transform.baseVal.getItem(0).setTranslate(0,0);
+        //drawableClone.transform.baseVal.appendItem(translation);
+        var rotation = drawingPanel.createSVGTransform();
+        //drawableClone.transform.baseVal.getItem(0).setRotate(0,0,0);
+        drawableClone.transform.baseVal.appendItem(rotation);
+        rotation.setRotate(0,0,0);    
 		drawableClone.addEventListener('mousedown', drawableElementMouseD,false);
 		drawingPanel.appendChild(drawableClone);    
 
@@ -203,15 +213,38 @@ function getOffset(element){
 
 // function for handling knob's mousedown event 
 function rotateElement(e){
-    console.log('rotate..');
+    if(centroid == null)
+        centroid = getCentroid(activeElement);
+    var rotation = activeElement.transform.baseVal.getItem(1);
+
+    /* point indicating rotation center - for debugging purposes
+    point = document.createElementNS("http://www.w3.org/2000/svg","circle");
+    point.setAttributeNS(null,"fill","red");
+    point.setAttributeNS(null,"r","2");
+    point.setAttributeNS(null,"cx",centroid[0]);
+    point.setAttributeNS(null,"cy",centroid[1]);
+    activeElement.appendChild(point);
+    */
+
+    // rotate left
+    if(this == activeKnobs[1]){
+        rotateL+=20;
+        rotation.setRotate(rotateL,centroid[0],centroid[1]);
+    }
+    else{
+        rotateR-=20;
+        rotation.setRotate(rotateR,centroid[0],centroid[1]);
+    }
 
 }
 
+
 function getTempRect(drawableEl){
-    // offset wzgledem lewej krawedzi okna aplikacji
+    //get drawing panel offset
     var offset = getOffset(drawingPanel);
-    // granice przekazanego obiektu
+    // get boundries of the passed element
     var shapeBoundries  = drawableEl.getBoundingClientRect();
+    // get position of the element for drawing panel coordinate system
     var x = shapeBoundries.left - offset.x;
     var x2 = x + shapeBoundries.width;
     var y = shapeBoundries.top - offset.y;
@@ -242,6 +275,8 @@ function addKnobs(svgElement){
     knob.setAttributeNS(null, "cx", svgElement.xPos - knobDistance);
     knob.setAttributeNS(null, "cy", svgElement.yPos - knobDistance);
     knob.setAttributeNS(null, "r", rotationKnobRadius);
+    knob.setAttributeNS(null, "transform", "rotate(0,0,0)");
+
     addAttributesNS(knob,knobStyle);
     drawingPanel.appendChild(knob);
     activeKnobs[0] = knob;
@@ -251,28 +286,11 @@ function addKnobs(svgElement){
     knob.setAttributeNS(null, "cx", tempRect.x2Pos + knobDistance);
     knob.setAttributeNS(null, "cy", svgElement.yPos - knobDistance);
     knob.setAttributeNS(null, "r", rotationKnobRadius);
+    knob.setAttributeNS(null, "transform", "rotate(0,0,0)");
+
     addAttributesNS(knob,knobStyle);
     drawingPanel.appendChild(knob);
     activeKnobs[1] = knob;
-
-    knob = document.createElementNS("http://www.w3.org/2000/svg","circle");
-    // set bottom-right knob
-    knob.setAttributeNS(null, "cx", tempRect.x2Pos + knobDistance);
-    knob.setAttributeNS(null, "cy", tempRect.y2Pos + knobDistance);
-    knob.setAttributeNS(null, "r", rotationKnobRadius);
-    addAttributesNS(knob,knobStyle);
-    drawingPanel.appendChild(knob);
-    activeKnobs[2] = knob;
-
-
-    knob = document.createElementNS("http://www.w3.org/2000/svg","circle");
-    // set bottom-left knob
-    knob.setAttributeNS(null, "cx", svgElement.xPos - knobDistance);
-    knob.setAttributeNS(null, "cy", tempRect.y2Pos + knobDistance);
-    knob.setAttributeNS(null, "r", rotationKnobRadius);
-    addAttributesNS(knob,knobStyle);
-    drawingPanel.appendChild(knob);
-    activeKnobs[3] = knob;
 
     // add mousedown event listeners
     for(let i=0; i < activeKnobs.length; i++){
@@ -295,6 +313,52 @@ function addAttributesNS(element, attrs){
         element.setAttributeNS(null,key,attrs[key]);
     }
 }
+
+//
+// functions for calculating rotation angle
+//
+
+// get vector from coordinates of two points
+// p1 - vector's initial point
+// p2 - vector's terminal point
+function getVector(p1,p2){
+    return [p2[0]-p1[0],p2[1]-p1[1]];
+}
+
+// dot product of two vectors [a1,b1] and [a2,b2]
+function dotProd(a,b){
+    return a[0]*a[1] + b[0]*b[1];
+}
+
+// vector length
+function getVectorLen(v){
+    return Math.sqrt(v[0]*v[0] + v[1]*v[1]);
+}
+
+function getAngle(center,point1,point2){
+    var vec1 = getVector(point1,center);
+    var vec2 = getVector(point2,center);
+    console.log("vec1 = "+ vec1 + "vec2 = " + vec2);
+    var dotP = dotProd(vec1,vec2);
+    var lenP = (getVectorLen(vec1) * getVectorLen(vec2));
+    if(lenP == 0)
+        return 0;
+    var cosAlpha = dotP / lenP;
+    var angle = Math.acos(cosAlpha) * (180/Math.PI);
+    if(Number.isFinite(angle))
+        return angle;
+    else return 0;
+}
+
+
+
+function getCentroid(element){
+    var box = element.getBBox();
+    var halfX = (box.width)/2 + box.x;
+    var halfY = (box.height)/2 + box.y;
+    return [halfX,halfY];
+}
+
 /*
  //rysowanie czarna kreska po panelu
 
