@@ -403,6 +403,24 @@ function getCentroid(element){
     return [halfX,halfY];
 }
 
+
+// get relative mouse movement coords based on passed MouseEvent parameter
+function getRelativeMouseMovement(e) {
+    // get postition of the mouse cursor  relative to the drawing panel
+    var cx = e.clientX-getOffset(drawingPanel).x;
+    var cy = e.clientY-getOffset(drawingPanel).y;
+    // get relative movement values
+    var dx = cx - cords.x;
+    var dy = cy - cords.y;
+    // update current mouse position
+    cords.x = cx;
+    cords.y = cy;
+    return {
+	   dx: dx,
+	   dy: dy 
+    	   };
+}
+
 /*
  //rysowanie czarna kreska po panelu
 
