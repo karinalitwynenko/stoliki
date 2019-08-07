@@ -288,13 +288,21 @@ function addResizeBorder(element){
     tempRect.classList.add('resize-pointer');   
     activeResizeBorder = tempRect;
     tempRect.addEventListener('mousedown',resize);
-    
     drawingPanel.appendChild(tempRect);
 }
+
+function modifyResizeBorder(element,sx,sy){
+	// calculate cursor distance(absolute value) to active element
+
+}
+	
 
 
 function resize(e){
     var offset = getOffset(drawingPanel);
+    
+    // set current distance
+    // modifyResizeBorder(); 
 
     this.addEventListener('mousemove', function(e){
         console.log("x = " + e.clientX - offset.x );
