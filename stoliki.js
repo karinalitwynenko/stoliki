@@ -238,11 +238,11 @@ function rotateElement(e){
     // rotate left
     if(this == activeKnobs[1]){
         rotate+=20;
-        rotation.setRotate(rotateL,centroid[0],centroid[1]);
+        rotation.setRotate(rotate,centroid[0],centroid[1]);
     }
     else{
         rotate-=20;
-        rotation.setRotate(rotateR,centroid[0],centroid[1]);
+        rotation.setRotate(rotate,centroid[0],centroid[1]);
     }
 
 }
