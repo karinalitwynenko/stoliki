@@ -192,6 +192,11 @@ var tableClicked = function(e){
         //drawableClone.transform.baseVal.getItem(0).setRotate(0,0,0);
         drawableClone.transform.baseVal.appendItem(rotation);
         rotation.setRotate(0,0,0);    
+        // 
+        var scale = drawingPanel.createSVGTransform();
+        drawableClone.transform.baseVal.appendItem(scale);
+        scale.setScale(1,1);
+
 		drawableClone.addEventListener('mousedown', drawableElementMouseD,false);
 		drawingPanel.appendChild(drawableClone);    
 
@@ -287,7 +292,7 @@ function addResizeBorder(element){
     var tempRect = getTempRect(element,true);
     tempRect.classList.add('resize-pointer');   
     activeResizeBorder = tempRect;
-    tempRect.addEventListener('mousedown',resize);
+    tempRect.addEventListener('mousedown',resize,true);
     drawingPanel.appendChild(tempRect);
 }
 
@@ -299,22 +304,27 @@ function modifyResizeBorder(element,sx,sy){
 
 
 function resize(e){
-    var offset = getOffset(drawingPanel);
-    
-    // set current distance
-    // modifyResizeBorder(); 
+    drawingPanel.addEventListener('mouseup',resizeMouseUp, true);
+    drawingPanel.addEventListener('mousemove',resizeMouseMove,true);
+}
 
-    this.addEventListener('mousemove', function(e){
-        console.log("x = " + e.clientX - offset.x );
-        console.log("y = " + e.clientY - offset.y );
-    });
+var resizeMouseUp = function(e){
+    drawingPanel.removeEventListener('mousemove',resizeMouseMove,true);
+    drawingPanel.onmouseup = null;
+    console.log("stop resizing...");
+}
 
-    this.addEventListener('mouseup', function(e){
-        this.onmousemove = null;
-        this.onmouseup = null;
-    });
-
-
+scaleX = 1;
+scaleY = 1;
+var resizeMouseMove = function(e){
+    var move = getRelativeMouseMovement(e);
+    console.log(move.dx + " , "+ move.dy);
+    var scale  = activeElement.transform.baseVal.getItem(2);
+    var translation = activeElement.transform.baseVal.getItem(0);
+    // 
+    scaleX+=0.1;
+    scaleY+=0.1;
+    scale.setScale(scaleX,scaleY);
 }
 
 
