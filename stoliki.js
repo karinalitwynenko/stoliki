@@ -430,13 +430,16 @@ function getRelativeMouseMovement(e) {
     // get relative movement values
     var dx = cx - cords.x;
     var dy = cy - cords.y;
+    dx.toFixed(1);
+    dy.toFixed(1);
     // update current mouse position
     cords.x = cx;
     cords.y = cy;
+    
     return {
 	   dx: dx,
 	   dy: dy 
-    	   };
+    };
 }
 
 /*
