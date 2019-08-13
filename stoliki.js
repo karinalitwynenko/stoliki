@@ -288,13 +288,21 @@ function addResizeBorder(element){
     tempRect.classList.add('resize-pointer');   
     activeResizeBorder = tempRect;
     tempRect.addEventListener('mousedown',resize);
-    
     drawingPanel.appendChild(tempRect);
 }
+
+function modifyResizeBorder(element,sx,sy){
+	// calculate cursor distance(absolute value) to active element
+
+}
+	
 
 
 function resize(e){
     var offset = getOffset(drawingPanel);
+    
+    // set current distance
+    // modifyResizeBorder(); 
 
     this.addEventListener('mousemove', function(e){
         console.log("x = " + e.clientX - offset.x );
@@ -401,6 +409,24 @@ function getCentroid(element){
     var halfX = (box.width)/2 + box.x;
     var halfY = (box.height)/2 + box.y;
     return [halfX,halfY];
+}
+
+
+// get relative mouse movement coords based on passed MouseEvent parameter
+function getRelativeMouseMovement(e) {
+    // get postition of the mouse cursor  relative to the drawing panel
+    var cx = e.clientX-getOffset(drawingPanel).x;
+    var cy = e.clientY-getOffset(drawingPanel).y;
+    // get relative movement values
+    var dx = cx - cords.x;
+    var dy = cy - cords.y;
+    // update current mouse position
+    cords.x = cx;
+    cords.y = cy;
+    return {
+	   dx: dx,
+	   dy: dy 
+    	   };
 }
 
 /*
