@@ -1,23 +1,18 @@
-//buff = [];
-// promien galki pozwalajacej na obrot obiektu
-const rotationKnobRadius = 5;
-const knobDistance = 2;
-const knobStyle = {"stroke":"gray", "stroke-width":1, "fill":"white", "id":"knob"};
 
-activeKnobs = []; // active(visible) rotation knobs
+
+const resizeGripStyle = { "stroke":"gray", "fill":"#3489eb", "id":"resizeGrip"};
+activeResizeGrips = [];
 activeElement = null;
-tables_count = 4;
+tables_count = 2;
 movedElement = null;
 movedTempEl = null;
-activeResizeBorder = null;
 elementClicked = false;
-centroid = null;
+activeBBox = null;
 ok = 'OK!';
 cords = {
     x: null,
     y: null
 }
-rotate = 0;
 
 
 // *****************************************
@@ -26,7 +21,7 @@ window.addEventListener("load", getSVGObjects, false);
 		
 // uzyskaj dokument SVG z tagu <object>
 function getDocument(embededEl) {
-    drawingPanel = document.getElementById("drawingPanel");
+
 
     // atr. contentDocument dziala poprawnie w firefoxie
     if (embededEl.contentDocument) {
@@ -42,16 +37,15 @@ function getDocument(embededEl) {
 }
         
 function getSVGObjects() {
+    drawingPanel = document.getElementById("drawingPanel");
     var elems = document.querySelectorAll(".embededSVG");
     for (let i = 0; i < elems.length; i++){
         var  doc = getDocument(elems[i]);
         // jesli udalo sie pobrac pliki svg
         if(doc){
-            for(let i=0;i<tables_count;i++){
-                // konfiguracja stolow
-                var svgEl = doc.getElementById('table'+i);
-                svgEl.addEventListener("click",tableClicked,false);   
-            }
+            var svgEl = doc.getElementsByClassName("table")[0];
+            svgEl.addEventListener("click",tableClicked,false);   
+            
         }
     }
 
@@ -64,13 +58,6 @@ function getSVGObjects() {
 // rozpocznij przemieszczanie obiektu, gdy przytrzymano przycisk
 // obsluga tylko lewym przyciskiem myszki
 var drawableElementMouseD = function(e) {
-    if(activeResizeBorder){
-        // remove active 'resize' border
-        activeResizeBorder.parentNode.removeChild(activeResizeBorder);
-        activeResizeBorder = null;
-    }
-
-
     // sprawdz czy lewy przycisk myszy
 	if(e.button==0){
 	    var shapeEl = getTempRect(this);
@@ -95,14 +82,15 @@ var drawableElementMouseD = function(e) {
         // dodaj obsluge zdarzen do panelu edycyjnego, aktywny obiekt
         // jest przechowywany w zmiennych movedElement oraz movedTempEl
         // --upuszczenie obiektu
-        drawingPanel.addEventListener("mouseup",drawableElementMouseUp,false);
+        drawingPanel.addEventListener("mouseup",drawableElementMouseUp);
         // --przemieszczanie obiektu
-        drawingPanel.addEventListener("mousemove",drawableElementMoved,false);
+        drawingPanel.addEventListener("mousemove",drawableElementMoved);
         // --gdy kursor opuści panel
-        drawingPanel.addEventListener("mouseleave",drawingPanelMouseLeave,false);
+        drawingPanel.addEventListener("mouseleave",drawingPanelMouseLeave);
         
-        // usun galki obrotu
+        // delete knobs and resize grips
         removeKnobs();
+        removeResizeGrips();
 		}
 }
 
@@ -116,7 +104,6 @@ var drawableElementMouseUp = function(e){
         drawingPanel.removeEventListener("mouseup",drawableElementMouseUp);
         drawingPanel.removeEventListener("mouseleave",drawingPanelMouseLeave);
 
-		el = movedElement;
         //var transformMatrix = movedElement.transform.baseVal.consolidate().matrix;
         // get previous translation
         var prevTranslation = movedElement.transform.baseVal.getItem(0);
@@ -127,28 +114,25 @@ var drawableElementMouseUp = function(e){
 		movedElement.xPos += X;
         movedElement.yPos += Y;
 
-        var translation = drawingPanel.createSVGTransform();
-        translation.setTranslate(X,Y);
 		X += prevTranslation.matrix.e;
 		Y += prevTranslation.matrix.f;
         prevTranslation.setTranslate(X,Y);
-
-		//movedElement.setAttributeNS(null,"transform","matrix( 1 0 0 1 "+X+" "+ Y+")");
-        //movedElement.transform.baseVal.appendItem(translation);
         movedElement.style = "visibility:visible;";
 
         movedTempEl.parentNode.removeChild(movedTempEl);
+        
         activeElement = movedElement;
+        // append active element as last child so it overlaps other visible elements
+        drawingPanel.appendChild(activeElement);
         movedElement = null;
         movedTempEl  = null;
         
         // add rotation knobs
         addKnobs(activeElement);
-        // add 'resize' border
-        addResizeBorder(activeElement);
+        // add resize grips
+        addResizeGrips(activeElement);
 
         centroid = null;
-
 
 	}
    
@@ -186,16 +170,19 @@ var tableClicked = function(e){
         var translation = drawingPanel.createSVGTransform();
         drawableClone.transform.baseVal.appendItem(translation);
         translation.setTranslate(0,0);
-        //drawableClone.transform.baseVal.getItem(0).setTranslate(0,0);
-        //drawableClone.transform.baseVal.appendItem(translation);
-        var rotation = drawingPanel.createSVGTransform();
-        //drawableClone.transform.baseVal.getItem(0).setRotate(0,0,0);
-        drawableClone.transform.baseVal.appendItem(rotation);
-        rotation.setRotate(0,0,0);    
-        // 
+
+        // add scale
         var scale = drawingPanel.createSVGTransform();
         drawableClone.transform.baseVal.appendItem(scale);
         scale.setScale(1,1);
+        drawableClone.setAttribute("data-scaleX",1); // append x-scale data
+        drawableClone.setAttribute("data-scaleY",1); // append y-scale data
+        
+        // add rotation
+        var rotation = drawingPanel.createSVGTransform();
+        drawableClone.transform.baseVal.appendItem(rotation);
+        rotation.setRotate(0,0,0);
+        drawableClone.setAttribute("data-rotation",0); // append rotation data
 
 		drawableClone.addEventListener('mousedown', drawableElementMouseD,false);
 		drawingPanel.appendChild(drawableClone);    
@@ -215,41 +202,6 @@ function moveSvgObject(svgObj,x,y) {
     svgObj.yPos = Y;
     svgObj.x2Pos = X2;
     svgObj.y2Pos = Y2;
-}
-
-function getOffset(element){
-    var rect = element.getBoundingClientRect();
-    return {
-        x: rect.left,
-        y: rect.top
-    };    
-}
-
-// function for handling knob's mousedown event 
-function rotateElement(e){
-    if(centroid == null)
-        centroid = getCentroid(activeElement);
-    var rotation = activeElement.transform.baseVal.getItem(1);
-
-    /* point indicating rotation center - for debugging purposes
-    point = document.createElementNS("http://www.w3.org/2000/svg","circle");
-    point.setAttributeNS(null,"fill","red");
-    point.setAttributeNS(null,"r","2");
-    point.setAttributeNS(null,"cx",centroid[0]);
-    point.setAttributeNS(null,"cy",centroid[1]);
-    activeElement.appendChild(point);
-    */
-
-    // rotate left
-    if(this == activeKnobs[1]){
-        rotate+=15;
-        rotation.setRotate(rotate,centroid[0],centroid[1]);
-    }
-    else{
-        rotate-=15;
-        rotation.setRotate(rotate,centroid[0],centroid[1]);
-    }
-
 }
 
 
@@ -287,158 +239,45 @@ function getTempRect(drawableEl,large = null){
 	
 } 
 
-// add invisible border around element so it can capture resize events
-function addResizeBorder(element){
-    var tempRect = getTempRect(element,true);
-    tempRect.classList.add('resize-pointer');   
-    activeResizeBorder = tempRect;
-    tempRect.addEventListener('mousedown',resize,true);
-    drawingPanel.appendChild(tempRect);
-}
 
-function modifyResizeBorder(element,sx,sy){
-	// calculate cursor distance(absolute value) to active element
+function getTransformBBox(element){
+    // get element's bbox
+    var bbox = element.getBBox();
+    // set svg attributes
+    var rect = document.createElementNS("http://www.w3.org/2000/svg","rect");
+    rect.setAttributeNS(null,"x",bbox.x.toFixed(2));
+    rect.setAttributeNS(null,"y",bbox.y.toFixed(2));
+    rect.setAttributeNS(null,"height",bbox.height.toFixed(2));
+    rect.setAttributeNS(null,"width",bbox.width.toFixed(2));
 
-}
-	
-
-
-function resize(e){
-    drawingPanel.addEventListener('mouseup',resizeMouseUp, true);
-    drawingPanel.addEventListener('mousemove',resizeMouseMove,true);
-}
-
-var resizeMouseUp = function(e){
-    drawingPanel.removeEventListener('mousemove',resizeMouseMove,true);
-    drawingPanel.onmouseup = null;
-    console.log("stop resizing...");
-}
-
-scaleX = 1;
-scaleY = 1;
-var resizeMouseMove = function(e){
-    var move = getRelativeMouseMovement(e);
-    console.log(move.dx + " , "+ move.dy);
-    var scale  = activeElement.transform.baseVal.getItem(2);
-    var translation = activeElement.transform.baseVal.getItem(0);
-    // 
-    scaleX+=0.1;
-    scaleY+=0.1;
-    scale.setScale(scaleX,scaleY);
-}
-
-
-function addKnobs(svgElement){
-    // use getTempRect function - get evaluated position of the element
-    var tempRect = getTempRect(svgElement);
-    // create svg circle
-    var knob = document.createElementNS("http://www.w3.org/2000/svg","circle");
-    // set top-letf knob
-    knob.setAttributeNS(null, "cx", svgElement.xPos - knobDistance);
-    knob.setAttributeNS(null, "cy", svgElement.yPos - knobDistance);
-    knob.setAttributeNS(null, "r", rotationKnobRadius);
-    knob.setAttributeNS(null, "transform", "rotate(0,0,0)");
-
-    addAttributesNS(knob,knobStyle);
-    drawingPanel.appendChild(knob);
-    activeKnobs[0] = knob;
-
-    knob = document.createElementNS("http://www.w3.org/2000/svg","circle");
-    // set top-right knob
-    knob.setAttributeNS(null, "cx", tempRect.x2Pos + knobDistance);
-    knob.setAttributeNS(null, "cy", svgElement.yPos - knobDistance);
-    knob.setAttributeNS(null, "r", rotationKnobRadius);
-    knob.setAttributeNS(null, "transform", "rotate(0,0,0)");
-
-    addAttributesNS(knob,knobStyle);
-    drawingPanel.appendChild(knob);
-    activeKnobs[1] = knob;
-
-    // add mousedown event listeners
-    for(let i=0; i < activeKnobs.length; i++){
-        activeKnobs[i].addEventListener("mousedown",rotateElement);
-    }
-
-}
-
-// delete active rotation knobs
-function removeKnobs(){
-    for(let i=0; i < activeKnobs.length; i++){
-        drawingPanel.removeChild(activeKnobs[i]);
-    }
-    activeKnobs = [];
-}
-
-// adding multiple attributes to ns node
-function addAttributesNS(element, attrs){
-    for( key in attrs){
-        element.setAttributeNS(null,key,attrs[key]);
-    }
-}
-
-//
-// functions for calculating rotation angle
-//
-
-// get vector from coordinates of two points
-// p1 - vector's initial point
-// p2 - vector's terminal point
-function getVector(p1,p2){
-    return [p2[0]-p1[0],p2[1]-p1[1]];
-}
-
-// dot product of two vectors [a1,b1] and [a2,b2]
-function dotProd(a,b){
-    return a[0]*a[1] + b[0]*b[1];
-}
-
-// vector length
-function getVectorLen(v){
-    return Math.sqrt(v[0]*v[0] + v[1]*v[1]);
-}
-
-function getAngle(center,point1,point2){
-    var vec1 = getVector(point1,center);
-    var vec2 = getVector(point2,center);
-    console.log("vec1 = "+ vec1 + "vec2 = " + vec2);
-    var dotP = dotProd(vec1,vec2);
-    var lenP = (getVectorLen(vec1) * getVectorLen(vec2));
-    if(lenP == 0)
-        return 0;
-    var cosAlpha = dotP / lenP;
-    var angle = Math.acos(cosAlpha) * (180/Math.PI);
-    if(Number.isFinite(angle))
-        return angle;
-    else return 0;
-}
-
-
-
-function getCentroid(element){
-    var box = element.getBBox();
-    var halfX = (box.width)/2 + box.x;
-    var halfY = (box.height)/2 + box.y;
-    return [halfX,halfY];
-}
-
-
-// get relative mouse movement coords based on passed MouseEvent parameter
-function getRelativeMouseMovement(e) {
-    // get postition of the mouse cursor  relative to the drawing panel
-    var cx = e.clientX.toFixed(1)-getOffset(drawingPanel).x;
-    var cy = e.clientY.toFixed(1)-getOffset(drawingPanel).y;
-    // get relative movement values
-    var dx = cx - cords.x;
-    var dy = cy - cords.y;
-    // update current mouse position
-    cords.x = cx;
-    cords.y = cy;
-    
+    // get element's transform matrix
+    var transformMatrix = element.getCTM();
+    transformMatrix.scale = true;
+    // create transform matrix in string form
+    var tr = rect.transform.baseVal.createSVGTransformFromMatrix(element.getCTM());
+    stringMatrix = transformMatrix.a.toFixed(2)+", "+transformMatrix.b.toFixed(2)+", "+transformMatrix.c.toFixed(2);
+    stringMatrix += ", "+transformMatrix.d.toFixed(2)+", "+transformMatrix.e.toFixed(2)+", "+transformMatrix.f.toFixed(2);
+    rect.setAttributeNS(null,"transform","matrix("+stringMatrix+")");
+    rect.style = "visibility:hidden;";
+    drawingPanel.appendChild(rect);
+    var leftCorner = getRelativePos(rect);
+    var boundingRect = rect.getBoundingClientRect();
+    var w = Number(boundingRect.width.toFixed(2));
+    var h = Number(boundingRect.height.toFixed(2));
+    drawingPanel.removeChild(rect);
     return {
-	   dx: dx,
-	   dy: dy 
-    };
+        x: leftCorner.x,
+        y: leftCorner.y,
+        w: w,
+        h: h,
+        rect:rect,
+    }
+    //return leftCorner;
 }
+
+
+
+
 
 /*
  //rysowanie czarna kreska po panelu
@@ -474,3 +313,12 @@ function clicked() {
 }
 
 */
+
+
+// ################################################
+// "C:\Program Files (x86)\Google\Chrome\Application\chrome.exe" --allow-file-access-from-files
+// /usr/bin/google-chrome-stable %U --allow-file-access-from-files
+
+
+
+
