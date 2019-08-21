@@ -1,7 +1,4 @@
 
-
-const resizeGripStyle = { "stroke":"gray", "fill":"#3489eb", "id":"resizeGrip"};
-activeResizeGrips = [];
 activeElement = null;
 tables_count = 2;
 movedElement = null;
@@ -16,9 +13,10 @@ cords = {
 
 
 // *****************************************
-// zaczekaj na elementy svg  az sie zaladuja
+// zaczekaj na elementy svg az sie zaladuja
 window.addEventListener("load", getSVGObjects, false);
-		
+window.addEventListener("load", setupLabelsPanel, false);
+window.addEventListener("load", setupLoginPanel, false);
 // uzyskaj dokument SVG z tagu <object>
 function getDocument(embededEl) {
 
@@ -128,7 +126,8 @@ var drawableElementMouseUp = function(e){
         movedTempEl  = null;
         
         // add rotation knobs
-        addKnobs(activeElement);
+        if(!activeElement.hasAttribute("data-rotationEnabled"))
+            addKnobs(activeElement);
         // add resize grips
         addResizeGrips(activeElement);
 
@@ -165,8 +164,8 @@ var tableClicked = function(e){
         var drawableClone = this.cloneNode(true);
         // clear transform list of the element
         drawableClone.transform.baseVal.clear();
-        //drawableClone.transform.baseVal.initialize(drawingPanel.createSVGTransform().setTranslate(0,0));
-        // add default translate and rotate transformation
+        
+        // add default translation
         var translation = drawingPanel.createSVGTransform();
         drawableClone.transform.baseVal.appendItem(translation);
         translation.setTranslate(0,0);

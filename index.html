@@ -6,6 +6,11 @@
 
 </head>
 <body>
+    <div id="obscure"></div>
+    <div id='loginPanel'>
+        <button class="loginPanelButton" id="fetchData">Fetch data</button>
+        <button class="loginPanelButton" id="skip">Skip</button>
+    </div>
     <div id='pickupPanel'>
         <!--
         <object class='embededSVG' id="tablesObject" data="pickup_panel.svg" type="image/svg+xml">
@@ -22,13 +27,29 @@
 
 
     </div>
-    <div id='container'>
-        <svg id='drawingPanel'></svg>
+    <div id='labelsPickup'>
+        <div id="customLabelEdit"> 
+            <input id="customLabelText">
+            <button id="addCustomLabel">Add label</button>
+        </div>
+        
     </div>
+    <div id='container'>
+        <svg id='drawingPanel'>
+            <defs>
+                <rect id="wrap" x="100" y="150" width="80" height="30"/>
+              </defs>
+        </svg>
+    </div>
+    
+    <script src='login.js'> </script> 
+    <script src='labels.js'> </script> 
     <script src='stoliki.js'> </script> 
     <script src='resizng.js'> </script> 
     <script src='rotating.js'> </script> 
     <script src='utility.js'> </script> 
+
+
 
 
 

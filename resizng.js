@@ -1,4 +1,7 @@
 const resizeGripSize = 8; 
+const resizeGripStyle = { "stroke":"gray", "fill":"#3489eb", "id":"resizeGrip"};
+
+activeResizeGrips = [];
 activeResizeGrip = null;
 /*
 adds resize "grips" to an element
