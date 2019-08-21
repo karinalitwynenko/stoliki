@@ -83,7 +83,7 @@ function gripMouseDown(e){
     cords.y = e.clientY - offset.y;
     activeBBox = getTransformBBox(activeElement);
     drawingPanel.addEventListener('mouseup',stopResizing, true);
-    drawingPanel.addEventListener("mouseleave",drawingPanelMouseLeave,true);
+    drawingPanel.addEventListener("mouseleave",drawingPanelMouseLeave);
     drawingPanel.addEventListener('mousemove',resize,true);
     
 }
@@ -91,11 +91,9 @@ function gripMouseDown(e){
 
 function stopResizing(e){
     drawingPanel.removeEventListener('mousemove',resize,true);
-    drawingPanel.removeEventListener("mouseleave",drawingPanelMouseLeave,true);
+    drawingPanel.removeEventListener("mouseleave",drawingPanelMouseLeave);
     drawingPanel.removeEventListener('mouseup',stopResizing,true);
     addKnobs(activeElement);
-    centroid = null;
-    //drawingPanel.onmouseup = null;
 }
 
 /* 
@@ -110,13 +108,7 @@ called when another element becomes active
     activeResizeGrips.length = 0;
 }
 
-// ###############################
-// resize grips events callbacks:
-
-scaleX = 1;
-scaleY = 1;
-
-// for x axis resizing
+// resize callback function
 function resize(e){
     // get scale item
     var scale  = activeElement.transform.baseVal.getItem(1);
