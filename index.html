@@ -2,57 +2,70 @@
 <html>
 <head>
     <title>Stoliki</title>
-    <link rel="stylesheet" href="style.css" type="text/css">
-
+    <link href="css/stoliki.css" rel="stylesheet">
+    <link href="css/stoliki-guests.css" rel="stylesheet">   
+    
+    <script src="js/file_loading.js"> </script> 
+    <script src="js/labels.js"> </script> 
+    <script src="js/stoliki.js"> </script> 
+    <script src="js/resizing.js"> </script> 
+    <script src="js/rotating.js"> </script> 
+    <script src="js/utility.js"> </script>
 </head>
 <body>
-    <div id="obscure"></div>
-    <div id='loginPanel'>
-        <button class="loginPanelButton" id="fetchData">Fetch data</button>
-        <button class="loginPanelButton" id="skip">Skip</button>
-    </div>
-    <div id='pickupPanel'>
-        <!--
-        <object class='embededSVG' id="tablesObject" data="pickup_panel.svg" type="image/svg+xml">
-        </object>
-        -->
-        <object class='embededSVG' data="svg-graphics/table0.svg" type="image/svg+xml">
-        </object>
-        <object class='embededSVG' data="svg-graphics/table1.svg"  type="image/svg+xml">
-        </object>
-        <object class='embededSVG' data="svg-graphics/table2.svg"  type="image/svg+xml">
-        </object>
-        <object class='embededSVG' data="svg-graphics/table3.svg"  type="image/svg+xml">
-        </object>
+    <div id='stoliki-container'>
 
-
-    </div>
-    <div id='labelsPickup'>
-        <div id="customLabelEdit"> 
-            <input id="customLabelText">
-            <button id="addCustomLabel">Add label</button>
+        <div id='pickupPanel'>
+                <object class='embededSVG' data="graphics/svg/table0.svg" type="image/svg+xml">
+                </object>
+                <object class='embededSVG' data="graphics/svg/table1.svg"   type="image/svg+xml">
+                </object>
+                <object class='embededSVG' data="graphics/svg/table2.svg"   type="image/svg+xml">
+                </object>
+                <object class='embededSVG' data="graphics/svg/table3.svg"   type="image/svg+xml">
+                </object>
         </div>
-        
-    </div>
-    <div id='container'>
-        <svg id='drawingPanel'>
-            <defs>
-                <rect id="wrap" x="100" y="150" width="80" height="30"/>
-              </defs>
-        </svg>
+    
+        <div id='stoliki-drawing-panel-container'>
+            <svg id='drawingPanel' xmlns="http://www.w3.org/2000/svg">
+                
+            </svg>
+            <div id='guest-info'> <span id='info-text'></span></div>
+            <div id='drawing-panel-tools'>
+                <button id="deleteButton" class='noselect dark-button'>&#10007;</button>
+                <button id="pencilButton" class='noselect dark-button'>pen</button>
+                <button id="saveButton" class='noselect dark-button'><a>save</a></button>
+            </div>
+        </div>
+    
+        <div id='labelsPickup'>
+            <div id="customLabelEdit"> 
+                <input id="customLabelText">
+                <button id="addCustomLabel" class='dark-button'>Add label</button>
+            </div>
+    
+            <div id='stoliki-guests'>
+                <div class='guest-cat-label'> Guests:</div>
+                <div class='guests-cat-container'> 
+                        <div class='stoliki-guest'>
+                            Uncle Ben
+                        </div>
+                        <div class='stoliki-guest'>
+                            Brother HL-1210WE
+                        </div>
+                        <div class='stoliki-guest'>
+                            Uncle Sam
+                        </div>
+                        <div class='stoliki-guest'>
+                            Tom
+                        </div>
+                        <div class='stoliki-guest'>
+                            Jerry
+                        </div>
+                </div>
+            </div>
+        </div>
     </div>
     
-    <script src='login.js'> </script> 
-    <script src='labels.js'> </script> 
-    <script src='stoliki.js'> </script> 
-    <script src='resizng.js'> </script> 
-    <script src='rotating.js'> </script> 
-    <script src='utility.js'> </script> 
-
-
-
-
-
-
 </body>
 </html>

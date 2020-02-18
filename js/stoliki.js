@@ -1,27 +1,39 @@
-
 activeElement = null;
-tables_count = 2;
 movedElement = null;
 movedTempEl = null;
-elementClicked = false;
 activeBBox = null;
-ok = 'OK!';
+drawingEnabled = false;
+drawableElementWasClicked = false;
 cords = {
     x: null,
     y: null
 }
 
-
 // *****************************************
-// zaczekaj na elementy svg az sie zaladuja
-window.addEventListener("load", getSVGObjects, false);
-window.addEventListener("load", setupLabelsPanel, false);
-window.addEventListener("load", setupLoginPanel, false);
-// uzyskaj dokument SVG z tagu <object>
+window.onload = function(e){
+    getSVGObjects();
+    setupLabelsPanel();
+    setupDeleting();
+    setupDrawing();
+    document.getElementById("saveButton").onclick = saveAsSvg;
+}
+
+function setupDeleting(){
+    document.getElementById('deleteButton').onclick = function(e){
+        if(!activeElement)
+            return;
+        drawingPanel.removeChild(activeElement);
+        activeElement = null;
+        document.getElementById('deleteButton').style.color = '';
+        document.getElementById('deleteButton').style.background = '';
+        removeResizeGrips();
+        removeKnobs();
+    }
+}
+
+// get svg document from <object> tag
 function getDocument(embededEl) {
-
-
-    // atr. contentDocument dziala poprawnie w firefoxie
+    // atr. contentDocument works in firefox
     if (embededEl.contentDocument) {
         return embededEl.contentDocument;
     } 
@@ -39,123 +51,125 @@ function getSVGObjects() {
     var elems = document.querySelectorAll(".embededSVG");
     for (let i = 0; i < elems.length; i++){
         var  doc = getDocument(elems[i]);
-        // jesli udalo sie pobrac pliki svg
+        // success
         if(doc){
             var svgEl = doc.getElementsByClassName("table")[0];
             svgEl.addEventListener("click",tableClicked,false);   
-            
         }
     }
-
-    drawingPanel.style = "background-image:url(grid_background.svg); background-repeat: repeat;"
+    
+    // set drawing panel background
+    drawingPanel.style = `background-image:url('graphics/svg/grid_background.svg'); background-repeat: repeat;`
+    var panelOnClick = function(e){
+        if(e.button == 0 && !drawableElementWasClicked){
+            activeElement = null;
+            removeResizeGrips();
+            removeKnobs();
+            document.getElementById('deleteButton').style.color = '';
+            document.getElementById('deleteButton').style.background = '';
+        }
+        drawableElementWasClicked = false;
+    }    
+    drawingPanel.addEventListener('click', panelOnClick, false);
 }
 
-
-
-
-// rozpocznij przemieszczanie obiektu, gdy przytrzymano przycisk
-// obsluga tylko lewym przyciskiem myszki
+// whe mouse button pressed - start moving selected object
 var drawableElementMouseD = function(e) {
-    // sprawdz czy lewy przycisk myszy
-	if(e.button==0){
-	    var shapeEl = getTempRect(this);
-		movedTempEl = shapeEl;
-		// ukryj element
-		this.style = "visibility:hidden;";
-		// wyswietl obrys (przerywana linia w ksztalcie obiektu)
-		drawingPanel.appendChild(shapeEl);
+    // check if left button was pressed
+    if(e.button != 0  || drawingEnabled)
+        return false;
+    
+    drawableElementWasClicked = true;
+    document.getElementById('deleteButton').style.color = 'white';
+    document.getElementById('deleteButton').style.background ='#d15656';
 
-		// polozenie kursora na panelu edycyjnym w momencie klikniecia - inicjalizacja
-		cords.x = e.clientX-getOffset(drawingPanel).x;
-		cords.y = e.clientY-getOffset(drawingPanel).y;
+    var shapeEl = getTempRect(this);
+    movedTempEl = shapeEl;
+    // hide object
+    this.style = "visibility:hidden;";
+    // when moving occurs, show temporary shape 
+    drawingPanel.appendChild(shapeEl);
 
-		movedTempEl  = shapeEl; // obrys obiektu, który będzie przesuwany po ekranie
-		var offset = getOffset(drawingPanel);
-        var shapeBoundries  = this.getBoundingClientRect();
-        // dodaj atrybut wezla z polozeniem obiektu wzgledem panelu edycyjnego
-		this.xPos = shapeBoundries.left - offset.x;
-		this.yPos = shapeBoundries.top - offset.y;
-        movedElement = this;
-        
-        // dodaj obsluge zdarzen do panelu edycyjnego, aktywny obiekt
-        // jest przechowywany w zmiennych movedElement oraz movedTempEl
-        // --upuszczenie obiektu
-        drawingPanel.addEventListener("mouseup",drawableElementMouseUp);
-        // --przemieszczanie obiektu
-        drawingPanel.addEventListener("mousemove",drawableElementMoved);
-        // --gdy kursor opuści panel
-        drawingPanel.addEventListener("mouseleave",drawingPanelMouseLeave);
-        
-        // delete knobs and resize grips
-        removeKnobs();
-        removeResizeGrips();
-		}
+    // initialise drawing panel cursor coords
+    cords.x = e.clientX-getOffset(drawingPanel).x;
+    cords.y = e.clientY-getOffset(drawingPanel).y;
+
+    movedTempEl  = shapeEl; // object that will be moved
+    var offset = getOffset(drawingPanel);
+    var shapeBoundries  = this.getBoundingClientRect();
+    // saves position of selected object
+    this.xPos = shapeBoundries.left - offset.x;
+    this.yPos = shapeBoundries.top - offset.y;
+    movedElement = this;
+    activeElement = movedElement;
+
+    // add listeners 
+    // -- dropping
+    drawingPanel.addEventListener("mouseup",drawableElementMouseUp);
+    // -- moving
+    drawingPanel.addEventListener("mousemove",drawableElementMoved);
+    // -- cursor leaves drawing panel
+    drawingPanel.addEventListener("mouseleave",drawingPanelMouseLeave);
+    
+    // delete knobs and resize grips
+    removeKnobs();
+    removeResizeGrips();
 }
-
 
 // drop element
 var drawableElementMouseUp = function(e){
-    // only for left mouse button up event 
+    // check if left button was pressed
 	if(e.button == 0){
-        // remove eventlisteners from element
-		drawingPanel.removeEventListener("mousemove",drawableElementMoved);
+        // remove eventlisteners from element        
         drawingPanel.removeEventListener("mouseup",drawableElementMouseUp);
+		drawingPanel.removeEventListener("mousemove",drawableElementMoved);
         drawingPanel.removeEventListener("mouseleave",drawingPanelMouseLeave);
 
-        //var transformMatrix = movedElement.transform.baseVal.consolidate().matrix;
         // get previous translation
         var prevTranslation = movedElement.transform.baseVal.getItem(0);
-        // calculate position for dropped element
+        // calculate new position for dropped element
 		var X = movedTempEl.xPos - movedElement.xPos; 
         var Y = movedTempEl.yPos - movedElement.yPos;
-        // update position data
-		movedElement.xPos += X;
-        movedElement.yPos += Y;
 
 		X += prevTranslation.matrix.e;
 		Y += prevTranslation.matrix.f;
         prevTranslation.setTranslate(X,Y);
         movedElement.style = "visibility:visible;";
 
-        movedTempEl.parentNode.removeChild(movedTempEl);
+        movedTempEl.parentNode.removeChild(movedTempEl); // remove temporary shape
         
-        activeElement = movedElement;
         // append active element as last child so it overlaps other visible elements
         drawingPanel.appendChild(activeElement);
         movedElement = null;
         movedTempEl  = null;
         
         // add rotation knobs
-        if(!activeElement.hasAttribute("data-rotationEnabled"))
+        if(activeElement.getAttribute("data-rotation-enabled") == "true")
             addKnobs(activeElement);
         // add resize grips
         addResizeGrips(activeElement);
-
-        centroid = null;
-
 	}
-   
 }
 
 function drawableElementMoved(e) {
-    // polozenie kursora na panelu edycyjnym
+    // get cursor position relative to drawing panel
     cx = e.clientX-getOffset(drawingPanel).x;
     cy = e.clientY-getOffset(drawingPanel).y;
-    // przesun o roznice polozen
+    // move object
     moveSvgObject(movedTempEl ,cx - cords.x,cy-cords.y);
-    // zmienna gloabalna przechowujaca poprzednie polozenie kursora
+    // update cursor position
     cords.x = cx;
     cords.y = cy;
-
 }
 
-// gdy podczas przesuwania elementu, kursor opuści pole edycyjne
+// if cursor leaves drawing panel and moving was in progress
 function drawingPanelMouseLeave(e){
     var event = new MouseEvent('mouseup', {
         view: window,
         button: 0
       });
-    drawingPanel.dispatchEvent(event); // wywołaj zdarzenie mouseup
+    // dispatch mouseup event
+    drawingPanel.dispatchEvent(event); 
 }
 
 // add table to the drawing panel
@@ -174,8 +188,8 @@ var tableClicked = function(e){
         var scale = drawingPanel.createSVGTransform();
         drawableClone.transform.baseVal.appendItem(scale);
         scale.setScale(1,1);
-        drawableClone.setAttribute("data-scaleX",1); // append x-scale data
-        drawableClone.setAttribute("data-scaleY",1); // append y-scale data
+        drawableClone.setAttribute("data-scale-x",1); // append x-scale data
+        drawableClone.setAttribute("data-scale-y",1); // append y-scale data
         
         // add rotation
         var rotation = drawingPanel.createSVGTransform();
@@ -183,15 +197,13 @@ var tableClicked = function(e){
         rotation.setRotate(0,0,0);
         drawableClone.setAttribute("data-rotation",0); // append rotation data
 
-		drawableClone.addEventListener('mousedown', drawableElementMouseD,false);
+        drawableClone.setAttribute("data-rotation-enabled","true"); // disable rotation
+		drawableClone.addEventListener('mousedown', drawableElementMouseD,true);
 		drawingPanel.appendChild(drawableClone);    
-
 	}
 }
 
-// przesuwanie obrysu o wartosc x i y
 function moveSvgObject(svgObj,x,y) {
-    var shapeBoundries  = svgObj.getBoundingClientRect();
     var X = svgObj.xPos + x;
     var Y = svgObj.yPos + y;
     var X2 = svgObj.x2Pos + x;
@@ -215,16 +227,15 @@ function getTempRect(drawableEl,large = null){
     var y = shapeBoundries.top - offset.y;
     var y2 = y + shapeBoundries.height;
     var tempRect = document.createElementNS("http://www.w3.org/2000/svg","path");
-    if(large){
+    if(large) {
         tempRect.setAttributeNS(null, "d", "M"+(x-2)+" "+(y-2)+" L"+(x2+2)+" "+(y-2)+" L"+(x2+2)+" "+(y2+2)+" L"+(x-2)+" "+(y2+2)+" Z");
         tempRect.setAttributeNS(null, "stroke-width", "5");
         tempRect.setAttributeNS(null, "stroke-opacity", "0");
     }
-    else{
+    else {
         tempRect.setAttributeNS(null, "d", "M"+x+" "+y+" L"+x2+" "+y+" L"+x2+" "+y2+" L"+x+" "+y2+" Z");
         tempRect.setAttributeNS(null, "stroke-width", "1");
         tempRect.setAttributeNS(null, "stroke-dasharray", "10,10");
-
     }
     tempRect.setAttributeNS(null, "fill", "none");
     tempRect.setAttributeNS(null, "stroke", "grey");
@@ -235,7 +246,6 @@ function getTempRect(drawableEl,large = null){
     tempRect.y2Pos = y2;
 
 	return tempRect;
-	
 } 
 
 
@@ -271,53 +281,51 @@ function getTransformBBox(element){
         h: h,
         rect:rect,
     }
-    //return leftCorner;
 }
 
+// for pen drawing functionality
+function setupDrawing(e){
+    document.getElementById('pencilButton').onclick = function(e) {
+        if(e.button != 0)
+            return;
+        if(drawingEnabled){
+            drawingPanel.onmousemove = null;
+            drawingPanel.onmousedown = null;
+            drawingPanel.onmouseup = null;
+            drawingPanel.style.cursor = 'auto';
+            this.style.color = '';
+            this.style.background = '';
+        }
+        else {
+            this.style.color = 'white';
+            this.style.background = '#74c46c';
+            drawingPanel.style.cursor = 'crosshair';
+            drawingPanel.onmousedown = onStartDrawing;
+            drawingPanel.onmouseup = function (e) {
+                drawingPanel.onmousemove = null;
+                lines = [];
+            }
+            drawingPanel.onmouseleave = function (e) {
+            var event = new MouseEvent('mouseup', {
+                view: window,
+                button: 0
+              });
+            // dispatch mouseup event
+            drawingPanel.dispatchEvent(event);
+            }
+        }
+        drawingEnabled = !drawingEnabled;
+    }
+}
 
-
-
-
-/*
- //rysowanie czarna kreska po panelu
-
-lines = [];
-
-var click = false;
-drawingPanel.onmousedown = function (e) {
-    console.log(ok);
-    var polyline = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
-    polyline.style = "fill:none;stroke:black;stroke-width:1";
+function onStartDrawing(e){
+    polyline = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
+    polyline.style = "fill:none;stroke:#202a54;stroke-width:2.5;";
     polyline.setAttributeNS(null, "points", (e.clientX-getOffset(drawingPanel).x) + "," + (e.clientY-getOffset(drawingPanel).y));
-    lines.push(polyline);
 
     drawingPanel.onmousemove = function (e) {
-        var polyline = lines[lines.length - 1];
         var points = polyline.getAttributeNS(null, "points");
-        console.log(" " + (e.clientX-getOffset(drawingPanel).x) + "," + (e.clientY-getOffset(drawingPanel).y));
         polyline.setAttributeNS(null, "points", points + " " + (e.clientX-getOffset(drawingPanel).x) + "," + (e.clientY-getOffset(drawingPanel).y));
-        lines[lines.length - 1] = polyline;
         drawingPanel.appendChild(polyline);
-
     }
-
 }
-drawingPanel.onmouseup = function (e) {
-    drawingPanel.onmousemove = null;
-
-}
-
-function clicked() {
-    click = !click;
-}
-
-*/
-
-
-// ################################################
-// "C:\Program Files (x86)\Google\Chrome\Application\chrome.exe" --allow-file-access-from-files
-// /usr/bin/google-chrome-stable %U --allow-file-access-from-files
-
-
-
-
