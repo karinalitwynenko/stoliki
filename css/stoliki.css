@@ -5,7 +5,6 @@ button:focus {outline:0;}
     height:90vh;
     display:flex;
     margin-top:2%;
-    padding-bottom: 5%;
     position: relative;
     font-size: 1.6vh;
 }
